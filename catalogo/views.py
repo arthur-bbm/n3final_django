@@ -3,6 +3,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Bolo
 from .forms import BoloForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 def pagina_inicial(request):
     return render(request, 'catalogo/index.html')
@@ -12,9 +15,17 @@ def lista_bolos(request):
     bolos = Bolo.objects.all()
     #Devolve a pagina de listagem de bolos
     #Com o dicionario bolos
+    query = request.GET.get('q')
+    if query:
+        bolos = bolos.filter(Q(nome__icontains=query) | Q(sabor__icontains=query))
+
+    paginator = Paginator(lista_bolos, 3)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request,
                   'catalogo/lista_bolos.html',
-                  {'bolos' : bolos})
+                  {'page_obj' : page_obj})
 
 @login_required()
 def novo_bolo(request):
@@ -62,3 +73,14 @@ def apagar_bolo(request, pk):
         return redirect('catalogo:lista_bolos')
 
     return render(request, 'catalogo/bolo_confirmar_exclusao.html', {'bolo': bolo})
+
+def register_user(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+
+    return render(request, 'registration/register.html', {'form': form})
